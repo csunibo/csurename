@@ -43,13 +43,13 @@ impl Config {
         .arg(
             Arg::with_name("recursive")
                 .help("Makes renaming recursive, renaming files in subfolders as well")
-                .short("r")
+                .short('r')
                 .long("recursive"),
         )
         .arg(
             Arg::with_name("directories")
                 .help("Renames directories as well")
-                .short("D")
+                .short('D')
                 .long("dir")
         )
         .arg(
@@ -60,7 +60,7 @@ impl Config {
         .arg(
             Arg::with_name("quiet")
                 .help("Suppress output")
-                .short("q")
+                .short('q')
                 .long("quiet")
         )
         .after_help("Full documentation available here: https://github.com/csunibo/csurename")
