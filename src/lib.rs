@@ -27,21 +27,11 @@ pub struct Config {
 impl Config {
     pub fn new() -> Result<Config, Box<dyn Error>> {
         let matches = command!()
-        .arg(
-                arg!(-t --target <DIR> "Specifies a different target directory").required(false).value_parser(value_parser!(PathBuf))
-        )
-        .arg(
-        arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well")
-        )
-        .arg(
-        arg!(-D --dir "Renames directories as well")
-        )
-        .arg(
-        arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line")
-        )
-        .arg(
-        arg!(-q --quiet "Suppress output")
-        )
+        .arg(arg!(-t --target <DIR> "Specifies a different target directory").required(false).value_parser(value_parser!(PathBuf)))
+        .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
+        .arg(arg!(-D --dir "Renames directories as well"))
+        .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
+        .arg(arg!(-q --quiet "Suppress output"))
         .after_help("Full documentation available here: https://github.com/csunibo/csurename")
         .get_matches();
 

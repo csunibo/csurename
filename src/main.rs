@@ -1,5 +1,5 @@
-use std::process;
 use csurename::Config;
+use std::process;
 
 fn main() {
     let config = Config::new().unwrap_or_else(|err| {
