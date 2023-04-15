@@ -46,7 +46,7 @@ impl Config {
         let text = matches.get_flag("text");
 
         Ok(Config {
-            target_dir: target_dir.to_path_buf(),
+            target_dir,
             recursive,
             include_dir,
             quiet,
@@ -74,15 +74,14 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
                 if !config.quiet {
                     println!(
-                        "{} names translated in {} s. See you next time!\n(^ _ ^)/",
-                        files_renamed, running_time
+                        "{files_renamed} names translated in {running_time} s. See you next time!\n(^ _ ^)/"
                     )
                 };
 
                 return Ok(());
             } else {
                 let translation = change_naming_convention(&PathBuf::from(input.trim()))?;
-                println!("{}", translation);
+                println!("{translation}");
                 files_renamed += 1;
             }
         }
@@ -103,7 +102,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let config_location = format!("{}/.config/csurename/ignore", home_path.to_string_lossy());
         if PathBuf::from(&config_location).is_file() {
             if let Some(e) = walk_builder.add_ignore(Path::new(&config_location)) {
-                eprintln!("Error parsing global config file: {}", e);
+                eprintln!("Error parsing global config file: {e}");
             }
         }
     }
@@ -132,23 +131,20 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             continue;
         }
 
-        let new_name = change_naming_convention(&path)?;
+        let new_name = change_naming_convention(path)?;
         let new_path = path
             .parent()
             .ok_or("can't find path parent")?
             .join(new_name);
         if path != new_path {
-            fs::rename(&path, &new_path)?;
+            fs::rename(path, &new_path)?;
             files_renamed += 1;
         }
     }
     let running_time: f32 = start_time.elapsed().as_micros() as f32 / 1_000_000f32;
 
     if !config.quiet {
-        println!(
-            "{} files renamed in {} s. See you next time!\n(^ _ ^)/",
-            files_renamed, running_time
-        )
+        println!("{files_renamed} files renamed in {running_time} s. See you next time!\n(^ _ ^)/")
     };
 
     Ok(())
@@ -160,10 +156,7 @@ pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn E
         .unwrap_or_else(|| OsStr::new(""))
         .to_str()
         .ok_or_else(|| {
-            format!(
-                "couldn't convert file stem of {:?} to valid Unicode",
-                path_to_file
-            )
+            format!("couldn't convert file stem of {path_to_file:?} to valid Unicode")
         })?;
 
     let file_extension = path_to_file
@@ -171,19 +164,16 @@ pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn E
         .unwrap_or_else(|| OsStr::new(""))
         .to_str()
         .ok_or_else(|| {
-            format!(
-                "couldn't convert file extension of {:?} to valid Unicode",
-                path_to_file
-            )
+            format!("couldn't convert file extension of {path_to_file:?} to valid Unicode")
         })?;
 
     let file_stem = file_stem.to_kebab_case();
 
     if file_stem.is_empty() {
-        Ok(format!(".{}", file_extension))
+        Ok(format!(".{file_extension}"))
     } else if file_extension.is_empty() {
         Ok(file_stem)
     } else {
-        Ok(format!("{}.{}", file_stem, file_extension))
+        Ok(format!("{file_stem}.{file_extension}"))
     }
 }
