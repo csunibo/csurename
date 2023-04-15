@@ -1,6 +1,6 @@
 [package]
 name = "csurename"
-version = "1.0.0"
+version = "1.3.0"
 authors = ["Stefano Volpe, <stefano.volpe2@studio.unibo.it>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -15,4 +15,4 @@ categories = ["command-line-utilities"]
 [dependencies]
 Inflector = "0.11.4"
 ignore = "0.4.18"
-clap = "4.2.1"
+clap = { version = "4.2.1", features = [ "cargo" ] }

@@ -12,10 +12,8 @@ use std::io;
 use std::path::*;
 use std::time::Instant;
 
-use clap::{App, AppSettings, Arg};
-
+use clap::{arg, command, value_parser};
 use ignore::WalkBuilder;
-
 use inflector::Inflector;
 
 pub struct Config {
@@ -28,56 +26,37 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Result<Config, Box<dyn Error>> {
-        let matches = App::new("csurename")
-        .version("v1.3.0")
-        .author("Stefano Volpe <stefano.volpe2@studio.unibo.it>")
-        .about("csurename is a small command line utility which makes sure your filenames adhere to @csunibo's naming standards.")
-        .usage("csurename [FLAGS] [TARGET]")
-        .setting(AppSettings::DeriveDisplayOrder)
+        let matches = command!()
         .arg(
-            Arg::with_name("TARGET")
-                .help("Specifies a different target directory")
-                .required(false)
-                .index(1),
+                arg!(-t --target <DIR> "Specifies a different target directory").required(false).value_parser(value_parser!(PathBuf))
         )
         .arg(
-            Arg::with_name("recursive")
-                .help("Makes renaming recursive, renaming files in subfolders as well")
-                .short('r')
-                .long("recursive"),
+        arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well")
         )
         .arg(
-            Arg::with_name("directories")
-                .help("Renames directories as well")
-                .short('D')
-                .long("dir")
+        arg!(-D --dir "Renames directories as well")
         )
         .arg(
-            Arg::with_name("text")
-                .help("Reads lines from stdin and translates them to the given convention in stdout until the first empty line")
-                .long("text")
+        arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line")
         )
         .arg(
-            Arg::with_name("quiet")
-                .help("Suppress output")
-                .short('q')
-                .long("quiet")
+        arg!(-q --quiet "Suppress output")
         )
         .after_help("Full documentation available here: https://github.com/csunibo/csurename")
         .get_matches();
 
-        let target_dir = match matches.value_of("TARGET") {
-            Some(dir) => PathBuf::from(dir),
-            None => env::current_dir()?,
-        };
+        let target_dir = matches
+            .get_one::<PathBuf>("TARGET")
+            .map_or(Err("no target was provided"), |p| Ok(p.to_path_buf()))
+            .or_else(|_| env::current_dir())?;
 
-        let recursive = matches.is_present("recursive");
-        let include_dir = matches.is_present("directories");
-        let quiet = matches.is_present("quiet");
-        let text = matches.is_present("text");
+        let recursive = matches.get_flag("recursive");
+        let include_dir = matches.get_flag("directories");
+        let quiet = matches.get_flag("quiet");
+        let text = matches.get_flag("text");
 
         Ok(Config {
-            target_dir,
+            target_dir: target_dir.to_path_buf(),
             recursive,
             include_dir,
             quiet,
@@ -112,9 +91,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
                 return Ok(());
             } else {
-                let translation = change_naming_convention(
-                    &PathBuf::from(input.trim()),
-                )?;
+                let translation = change_naming_convention(&PathBuf::from(input.trim()))?;
                 println!("{}", translation);
                 files_renamed += 1;
             }
@@ -187,9 +164,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn change_naming_convention(
-    path_to_file: &Path,
-) -> Result<String, Box<dyn Error>> {
+pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn Error>> {
     let file_stem = path_to_file
         .file_stem()
         .unwrap_or_else(|| OsStr::new(""))
