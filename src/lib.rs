@@ -27,21 +27,20 @@ pub struct Config {
 impl Config {
     pub fn new() -> Result<Config, Box<dyn Error>> {
         let matches = command!()
-        .arg(arg!(-t --target <DIR> "Specifies a different target directory").required(false).value_parser(value_parser!(PathBuf)))
-        .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
-        .arg(arg!(-D --dir "Renames directories as well"))
-        .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
-        .arg(arg!(-q --quiet "Suppress output"))
-        .after_help("Full documentation available here: https://github.com/csunibo/csurename")
-        .get_matches();
+            .arg(arg!([TARGET] "Specifies a target directory, working dir if none").value_parser(value_parser!(PathBuf)))
+            .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
+            .arg(arg!(-D --dir "Renames directories as well"))
+            .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
+            .arg(arg!(-q --quiet "Suppress output"))
+            .after_help("Full documentation available here: https://github.com/csunibo/csurename")
+            .get_matches();
 
         let target_dir = matches
             .get_one::<PathBuf>("TARGET")
-            .map_or(Err("no target was provided"), |p| Ok(p.to_path_buf()))
-            .or_else(|_| env::current_dir())?;
+            .map_or(env::current_dir(), |p| Ok(p.to_path_buf()))?;
 
         let recursive = matches.get_flag("recursive");
-        let include_dir = matches.get_flag("directories");
+        let include_dir = matches.get_flag("dir");
         let quiet = matches.get_flag("quiet");
         let text = matches.get_flag("text");
 
