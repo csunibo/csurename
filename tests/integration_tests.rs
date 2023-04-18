@@ -18,7 +18,7 @@ fn fails_with_empty_path() {
         .arg("")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("No such file or directory"));
+        .stderr(predicate::str::contains("a value is required"));
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn fails_with_wrong_number_of_targets() {
         .arg("banana")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Found argument 'banana' which wasn't expected, or isn't valid in this context"));
+        .stderr(predicate::str::contains("unexpected argument"));
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn fails_with_duplicate_parameter_names() {
         .arg("BroDoesTooMuchCTRLV")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("error: The argument '--recursive' was provided more than once, but cannot be used multiple times"));
+        .stderr(predicate::str::contains("cannot be used multiple times"));
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn fails_for_unknown_argument() {
         .arg("BroDidntReadTheDocs")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Found argument '--whaaaat' which wasn\'t expected, or isn\'t valid in this context"));
+        .stderr(predicate::str::contains("unexpected argument"));
 }
 
 #[test]

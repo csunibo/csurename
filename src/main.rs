@@ -1,19 +1,14 @@
-use std::process;
 use csurename::Config;
+use std::process;
 
 fn main() {
     let config = Config::new().unwrap_or_else(|err| {
-        eprintln!("Problem parsing arguments: {}", err);
+        eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });
 
-    match csurename::run(config) {
-        Err(e) => {
-            eprintln!("Application error: {}", e);
-
-            process::exit(1);
-        }
-
-        Ok(()) => (),
+    if let Err(e) = csurename::run(config) {
+        eprintln!("Application error: {e}");
+        process::exit(1);
     }
 }

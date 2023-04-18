@@ -12,10 +12,8 @@ use std::io;
 use std::path::*;
 use std::time::Instant;
 
-use clap::{App, AppSettings, Arg};
-
+use clap::{arg, command, value_parser};
 use ignore::WalkBuilder;
-
 use inflector::Inflector;
 
 pub struct Config {
@@ -28,53 +26,23 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Result<Config, Box<dyn Error>> {
-        let matches = App::new("csurename")
-        .version("v1.3.0")
-        .author("Stefano Volpe <stefano.volpe2@studio.unibo.it>")
-        .about("csurename is a small command line utility which makes sure your filenames adhere to @csunibo's naming standards.")
-        .usage("csurename [FLAGS] [TARGET]")
-        .setting(AppSettings::DeriveDisplayOrder)
-        .arg(
-            Arg::with_name("TARGET")
-                .help("Specifies a different target directory")
-                .required(false)
-                .index(1),
-        )
-        .arg(
-            Arg::with_name("recursive")
-                .help("Makes renaming recursive, renaming files in subfolders as well")
-                .short('r')
-                .long("recursive"),
-        )
-        .arg(
-            Arg::with_name("directories")
-                .help("Renames directories as well")
-                .short('D')
-                .long("dir")
-        )
-        .arg(
-            Arg::with_name("text")
-                .help("Reads lines from stdin and translates them to the given convention in stdout until the first empty line")
-                .long("text")
-        )
-        .arg(
-            Arg::with_name("quiet")
-                .help("Suppress output")
-                .short('q')
-                .long("quiet")
-        )
-        .after_help("Full documentation available here: https://github.com/csunibo/csurename")
-        .get_matches();
+        let matches = command!()
+            .arg(arg!([TARGET] "Specifies a target directory, working dir if none").value_parser(value_parser!(PathBuf)))
+            .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
+            .arg(arg!(-D --dir "Renames directories as well"))
+            .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
+            .arg(arg!(-q --quiet "Suppress output"))
+            .after_help("Full documentation available here: https://github.com/csunibo/csurename")
+            .get_matches();
 
-        let target_dir = match matches.value_of("TARGET") {
-            Some(dir) => PathBuf::from(dir),
-            None => env::current_dir()?,
-        };
+        let target_dir = matches
+            .get_one::<PathBuf>("TARGET")
+            .map_or(env::current_dir(), |p| Ok(p.to_path_buf()))?;
 
-        let recursive = matches.is_present("recursive");
-        let include_dir = matches.is_present("directories");
-        let quiet = matches.is_present("quiet");
-        let text = matches.is_present("text");
+        let recursive = matches.get_flag("recursive");
+        let include_dir = matches.get_flag("dir");
+        let quiet = matches.get_flag("quiet");
+        let text = matches.get_flag("text");
 
         Ok(Config {
             target_dir,
@@ -105,17 +73,14 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
                 if !config.quiet {
                     println!(
-                        "{} names translated in {} s. See you next time!\n(^ _ ^)/",
-                        files_renamed, running_time
+                        "{files_renamed} names translated in {running_time} s. See you next time!\n(^ _ ^)/"
                     )
                 };
 
                 return Ok(());
             } else {
-                let translation = change_naming_convention(
-                    &PathBuf::from(input.trim()),
-                )?;
-                println!("{}", translation);
+                let translation = change_naming_convention(&PathBuf::from(input.trim()))?;
+                println!("{translation}");
                 files_renamed += 1;
             }
         }
@@ -136,7 +101,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let config_location = format!("{}/.config/csurename/ignore", home_path.to_string_lossy());
         if PathBuf::from(&config_location).is_file() {
             if let Some(e) = walk_builder.add_ignore(Path::new(&config_location)) {
-                eprintln!("Error parsing global config file: {}", e);
+                eprintln!("Error parsing global config file: {e}");
             }
         }
     }
@@ -165,40 +130,32 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             continue;
         }
 
-        let new_name = change_naming_convention(&path)?;
+        let new_name = change_naming_convention(path)?;
         let new_path = path
             .parent()
             .ok_or("can't find path parent")?
             .join(new_name);
         if path != new_path {
-            fs::rename(&path, &new_path)?;
+            fs::rename(path, &new_path)?;
             files_renamed += 1;
         }
     }
     let running_time: f32 = start_time.elapsed().as_micros() as f32 / 1_000_000f32;
 
     if !config.quiet {
-        println!(
-            "{} files renamed in {} s. See you next time!\n(^ _ ^)/",
-            files_renamed, running_time
-        )
+        println!("{files_renamed} files renamed in {running_time} s. See you next time!\n(^ _ ^)/")
     };
 
     Ok(())
 }
 
-pub fn change_naming_convention(
-    path_to_file: &Path,
-) -> Result<String, Box<dyn Error>> {
+pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn Error>> {
     let file_stem = path_to_file
         .file_stem()
         .unwrap_or_else(|| OsStr::new(""))
         .to_str()
         .ok_or_else(|| {
-            format!(
-                "couldn't convert file stem of {:?} to valid Unicode",
-                path_to_file
-            )
+            format!("couldn't convert file stem of {path_to_file:?} to valid Unicode")
         })?;
 
     let file_extension = path_to_file
@@ -206,19 +163,16 @@ pub fn change_naming_convention(
         .unwrap_or_else(|| OsStr::new(""))
         .to_str()
         .ok_or_else(|| {
-            format!(
-                "couldn't convert file extension of {:?} to valid Unicode",
-                path_to_file
-            )
+            format!("couldn't convert file extension of {path_to_file:?} to valid Unicode")
         })?;
 
     let file_stem = file_stem.to_kebab_case();
 
     if file_stem.is_empty() {
-        Ok(format!(".{}", file_extension))
+        Ok(format!(".{file_extension}"))
     } else if file_extension.is_empty() {
         Ok(file_stem)
     } else {
-        Ok(format!("{}.{}", file_stem, file_extension))
+        Ok(format!("{file_stem}.{file_extension}"))
     }
 }
