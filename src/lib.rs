@@ -58,7 +58,6 @@ impl Config {
             .arg(arg!([TARGET] "Specifies a target directory, working dir if none").value_parser(value_parser!(PathBuf)))
             .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
             .arg(arg!(-D --dir "Renames directories as well"))
-            .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
             .arg(arg!(-q --quiet "Suppress output"))
             .after_help("Full documentation available here: https://github.com/csunibo/csurename")
             .get_matches();
