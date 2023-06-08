@@ -53,7 +53,7 @@ fn change_from_stdin(config: RunConfig, start_time: Instant) -> Result<(), Box<d
     Ok(())
 }
 
-pub fn run(config: RunConfig) -> Result<(), Box<dyn Error>> {
+pub fn check_names(config: RunConfig) -> Result<(), Box<dyn Error>> {
     let start_time = Instant::now();
 
     // If the text flag is specified, read from stdin and translate to stdout instead of renaming files
@@ -126,7 +126,7 @@ pub fn run(config: RunConfig) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn Error>> {
+fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn Error>> {
     let file_stem = path_to_file
         .file_stem()
         .unwrap_or_else(|| OsStr::new(""))

@@ -21,7 +21,7 @@ fn main() {
         from_stdin: config.text,
     };
 
-    if let Err(e) = csurename::run(run_config) {
+    if let Err(e) = csurename::check_names(run_config) {
         eprintln!("Application error: {e}");
         process::exit(1);
     }
