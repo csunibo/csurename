@@ -1,11 +1,9 @@
+use clap::Parser;
 use csurename::Config;
 use std::process;
 
 fn main() {
-    let config = Config::new().unwrap_or_else(|err| {
-        eprintln!("Problem parsing arguments: {err}");
-        process::exit(1);
-    });
+    let config = Config::parse();
 
     if let Err(e) = csurename::run(config) {
         eprintln!("Application error: {e}");

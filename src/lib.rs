@@ -12,47 +12,39 @@ use std::io;
 use std::path::*;
 use std::time::Instant;
 
-use clap::{arg, command, value_parser};
+use clap::Parser;
+use clap::{arg, command};
 use ignore::WalkBuilder;
 use inflector::Inflector;
 use unicode_normalization::UnicodeNormalization;
 
+#[derive(Parser, Debug)]
+#[command(
+    author,
+    version,
+    about,
+    long_about = None,
+    after_help = "Full documentation available here: https://github.com/csunibo/csurename"
+)]
 pub struct Config {
-    target_dir: PathBuf,
+    /// Specifies a target directory, working dir if none
+    target_dir: Option<String>,
+
+    /// Makes renaming recursive, renaming files in subfolders as well
+    #[arg(short, long)]
     recursive: bool,
+
+    /// Renames directories as well
+    #[arg(short = 'D', long = "dir")]
     include_dir: bool,
+
+    /// Suppress output
+    #[arg(short, long)]
     quiet: bool,
+
+    /// Reads lines from stdin and translates them to the given convention in stdout until the first empty line
+    #[arg(short = 'T', long)]
     text: bool,
-}
-
-impl Config {
-    pub fn new() -> Result<Config, Box<dyn Error>> {
-        let matches = command!()
-            .arg(arg!([TARGET] "Specifies a target directory, working dir if none").value_parser(value_parser!(PathBuf)))
-            .arg(arg!(-r --recursive "Makes renaming recursive, renaming files in subfolders as well"))
-            .arg(arg!(-D --dir "Renames directories as well"))
-            .arg(arg!(-T --text "Reads lines from stdin and translates them to the given convention in stdout until the first empty line"))
-            .arg(arg!(-q --quiet "Suppress output"))
-            .after_help("Full documentation available here: https://github.com/csunibo/csurename")
-            .get_matches();
-
-        let target_dir = matches
-            .get_one::<PathBuf>("TARGET")
-            .map_or(env::current_dir(), |p| Ok(p.to_path_buf()))?;
-
-        let recursive = matches.get_flag("recursive");
-        let include_dir = matches.get_flag("dir");
-        let quiet = matches.get_flag("quiet");
-        let text = matches.get_flag("text");
-
-        Ok(Config {
-            target_dir,
-            recursive,
-            include_dir,
-            quiet,
-            text,
-        })
-    }
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
@@ -87,7 +79,11 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let mut walk_builder = WalkBuilder::new(&config.target_dir);
+    let target_dir = &config
+        .target_dir
+        .map_or_else(|| env::current_dir(), |p| Ok(PathBuf::from(p)))?;
+
+    let mut walk_builder = WalkBuilder::new(target_dir);
 
     walk_builder
         .max_depth(if !config.recursive { Some(1) } else { None })
@@ -127,7 +123,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         // Skips any entry that isn't a file if the "-D" flag is not specified.
         // Always skips the target directory to prevent changing paths that the program will try to access.
         // (and because it would be quite unexpected as well)
-        if !config.include_dir && !path.is_file() || path.eq(&config.target_dir) {
+        if !config.include_dir && !path.is_file() || path.eq(target_dir) {
             continue;
         }
 
@@ -167,7 +163,11 @@ pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn E
             format!("couldn't convert file extension of {path_to_file:?} to valid Unicode")
         })?;
 
-    let file_stem = file_stem.nfd().filter(char::is_ascii).collect::<String>().to_kebab_case();
+    let file_stem = file_stem
+        .nfd()
+        .filter(char::is_ascii)
+        .collect::<String>()
+        .to_kebab_case();
 
     if file_stem.is_empty() {
         Ok(format!(".{file_extension}"))
