@@ -167,7 +167,11 @@ pub fn change_naming_convention(path_to_file: &Path) -> Result<String, Box<dyn E
             format!("couldn't convert file extension of {path_to_file:?} to valid Unicode")
         })?;
 
-    let file_stem = file_stem.nfd().filter(char::is_ascii).collect::<String>().to_kebab_case();
+    let file_stem = file_stem
+        .nfd()
+        .filter(char::is_ascii)
+        .collect::<String>()
+        .to_kebab_case();
 
     if file_stem.is_empty() {
         Ok(format!(".{file_extension}"))
