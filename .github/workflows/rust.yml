@@ -16,5 +16,28 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build
+
+    - name: ⚡ Restore cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: 📃 Check formatting
+      run: cargo fmt --check --verbose
+      if: always()
+
+    - name: 📎 Clippy
+      run: cargo clippy --verbose -- -D warnings
+      if: always()
+
+    - name: 🏗 Build
       run: cargo build --verbose
+      if: always()
+
+    - name: 🤖 Test
+      run: cargo test --verbose
+      if: always()
