@@ -34,7 +34,7 @@ fn change_from_stdin(config: RunConfig, start_time: Instant) -> Result<(), Box<d
         let line = line?;
         let trimmed = line.trim();
 
-        if trimmed.len() == 0 || trimmed.is_empty() {
+        if trimmed.is_empty() {
             break;
         } else {
             let translation = change_naming_convention(&PathBuf::from(trimmed.trim()))?;

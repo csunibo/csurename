@@ -8,7 +8,7 @@ fn main() {
 
     let target_dir = config
         .target_dir
-        .map_or_else(|| env::current_dir(), |p| Ok(PathBuf::from(p)))
+        .map_or_else(env::current_dir, |p| Ok(PathBuf::from(p)))
         .expect(
             "Could not read target directory. Please make sure you have the right permissions.",
         );
