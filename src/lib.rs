@@ -12,78 +12,56 @@ use std::io;
 use std::path::*;
 use std::time::Instant;
 
-use clap::Parser;
-use clap::{arg, command};
 use ignore::WalkBuilder;
 use inflector::Inflector;
 use unicode_normalization::UnicodeNormalization;
 
-#[derive(Parser, Debug)]
-#[command(
-    author,
-    version,
-    about,
-    long_about = None,
-    after_help = "Full documentation available here: https://github.com/csunibo/csurename"
-)]
-pub struct Config {
-    /// Specifies a target directory, working dir if none
-    target_dir: Option<String>,
-
-    /// Makes renaming recursive, renaming files in subfolders as well
-    #[arg(short, long)]
-    recursive: bool,
-
-    /// Renames directories as well
-    #[arg(short = 'D', long = "dir")]
-    include_dir: bool,
-
-    /// Suppress output
-    #[arg(short, long)]
-    quiet: bool,
-
-    /// Reads lines from stdin and translates them to the given convention in stdout until the first empty line
-    #[arg(short = 'T', long)]
-    text: bool,
+pub struct RunConfig {
+    pub target_dir: PathBuf,
+    pub recursive: bool,
+    pub include_dir: bool,
+    pub quiet: bool,
+    pub from_stdin: bool,
 }
 
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let start_time = Instant::now();
+fn change_from_stdin(config: RunConfig, start_time: Instant) -> Result<(), Box<dyn Error>> {
+    let stdin = io::stdin();
+
+    let lines = stdin.lines();
 
     let mut files_renamed: u64 = 0;
+    for line in lines {
+        let line = line?;
+        let trimmed = line.trim();
 
-    // If the text flag is specified, read from stdin and translate to stdout instead of renaming files
-    if config.text {
-        let stdin = io::stdin();
-
-        loop {
-            let mut input = String::new();
-
-            let len = stdin.read_line(&mut input)?;
-
-            if len == 0 || input.trim().is_empty() {
-                let running_time: f32 = start_time.elapsed().as_micros() as f32 / 1_000_000f32;
-
-                if !config.quiet {
-                    println!(
-                        "{files_renamed} names translated in {running_time} s. See you next time!\n(^ _ ^)/"
-                    )
-                };
-
-                return Ok(());
-            } else {
-                let translation = change_naming_convention(&PathBuf::from(input.trim()))?;
-                println!("{translation}");
-                files_renamed += 1;
-            }
+        if trimmed.is_empty() {
+            break;
+        } else {
+            let translation = change_naming_convention(&PathBuf::from(trimmed.trim()))?;
+            println!("{translation}");
+            files_renamed += 1;
         }
     }
 
-    let target_dir = &config
-        .target_dir
-        .map_or_else(|| env::current_dir(), |p| Ok(PathBuf::from(p)))?;
+    let running_time: f32 = start_time.elapsed().as_micros() as f32 / 1_000_000f32;
+    if !config.quiet {
+        println!(
+            "{files_renamed} names translated in {running_time} s. See you next time!\n(^ _ ^)/"
+        )
+    };
 
-    let mut walk_builder = WalkBuilder::new(target_dir);
+    Ok(())
+}
+
+pub fn run(config: RunConfig) -> Result<(), Box<dyn Error>> {
+    let start_time = Instant::now();
+
+    // If the text flag is specified, read from stdin and translate to stdout instead of renaming files
+    if config.from_stdin {
+        return change_from_stdin(config, start_time);
+    }
+
+    let mut walk_builder = WalkBuilder::new(&config.target_dir);
 
     walk_builder
         .max_depth(if !config.recursive { Some(1) } else { None })
@@ -115,6 +93,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    let mut files_renamed: u64 = 0;
     for entry in walk_builder.build() {
         let entry = entry?;
 
@@ -123,7 +102,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         // Skips any entry that isn't a file if the "-D" flag is not specified.
         // Always skips the target directory to prevent changing paths that the program will try to access.
         // (and because it would be quite unexpected as well)
-        if !config.include_dir && !path.is_file() || path.eq(target_dir) {
+        if !config.include_dir && !path.is_file() || path.eq(&config.target_dir) {
             continue;
         }
 
@@ -132,6 +111,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             .parent()
             .ok_or("can't find path parent")?
             .join(new_name);
+
         if path != new_path {
             fs::rename(path, &new_path)?;
             files_renamed += 1;
