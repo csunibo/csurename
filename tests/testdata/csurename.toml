@@ -1,0 +1,11 @@
+[paths.root]
+path = "./tests/testdata"
+pattern = "*.toml"
+
+[paths.err]
+path = "./tests/testdata/testdir"
+pattern = "^[a-z0-9]+\\.txt$"
+
+[paths.ok]
+path = "./tests/testdata/testdir"
+pattern = "^[a-Z0-9]+\\.txt$"

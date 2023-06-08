@@ -1,5 +1,5 @@
 use clap::Parser;
-use csurename::RunConfig;
+use csurename::{CheckOptions, FixOptions};
 
 use std::{env, path::PathBuf, process};
 
@@ -13,15 +13,19 @@ fn main() {
             "Could not read target directory. Please make sure you have the right permissions.",
         );
 
-    let run_config = RunConfig {
-        target_dir,
-        recursive: config.recursive,
-        include_dir: config.include_dir,
-        quiet: config.quiet,
-        from_stdin: config.text,
-    };
-
-    if let Err(e) = csurename::check_names(run_config) {
+    if let Err(e) = match config.cmd {
+        Commands::Check { config } => csurename::check_names(CheckOptions {
+            config_file: config,
+            paths: None,
+        }),
+        Commands::Fix {} => csurename::fix_names(FixOptions {
+            target_dir,
+            recursive: config.recursive,
+            include_dir: config.include_dir,
+            quiet: config.quiet,
+            from_stdin: config.text,
+        }),
+    } {
         eprintln!("Application error: {e}");
         process::exit(1);
     }
@@ -36,22 +40,34 @@ fn main() {
     after_help = "Full documentation available here: https://github.com/csunibo/csurename"
 )]
 pub struct Args {
-    /// Specifies a target directory, working dir if none
+    #[command(subcommand)]
+    cmd: Commands,
+
+    /// Specify a target directory, working dir if none
     target_dir: Option<String>,
 
-    /// Makes renaming recursive, renaming files in subfolders as well
+    /// Recursively check / translate files in subdirectories
     #[arg(short, long)]
     recursive: bool,
 
-    /// Renames directories as well
+    /// Include directories in the renaming process
     #[arg(short = 'D', long = "dir")]
     include_dir: bool,
+
+    /// Read lines from stdin and check / translate them to stdout
+    #[arg(short = 'T', long)]
+    text: bool,
 
     /// Suppress output
     #[arg(short, long)]
     quiet: bool,
+}
 
-    /// Reads lines from stdin and translates them to the given convention in stdout until the first empty line
-    #[arg(short = 'T', long)]
-    text: bool,
+#[derive(Parser, Debug)]
+enum Commands {
+    Check {
+        #[arg(short, long)]
+        config: Option<String>,
+    },
+    Fix {},
 }
